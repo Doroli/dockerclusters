@@ -1,0 +1,4 @@
+services:
+  cowsay: #название сервиса
+    image: grycap/cowsay #образ, на основании которогостроится контейнер
+    command: ["/usr/games/cowsay", "hello!"] #команда, которая передается в контейнер

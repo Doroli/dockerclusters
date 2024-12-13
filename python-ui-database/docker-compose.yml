@@ -1,0 +1,45 @@
+networks:
+  dockerclusters:
+    driver: bridge
+
+services:
+  app:
+    build: ./app # контекст для сборки, по-умолчанию ищет Dockerfile в этой директории
+    links: # связь контейнеров друг с другом, один из способов организации сетевого взаимодействия
+      - db
+    ports: # проброс портов <Host>:<Container>
+      - "8090:5000"
+    networks:
+      - dockerclusters
+    environment: # передаем параметры связи с базой контейнеру приложения
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      PORT: 5000
+
+  db:
+    image: mysql:5.7
+    ports:
+      - "32000:3306" # 32000 - порт для подключения к базе внешним клиентом
+    networks:
+      - dockerclusters
+    volumes: # привязка каталога на диске хост машины к контейнеру
+      - ./db:/docker-entrypoint-initdb.d/:ro # привязка каталога на диске со скриптами для баы данных хост машины к контейнеру
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD} # тут есть небольшой нюанс в dockre-compose, по-умолчанию параметры из .env не пробрасываются внутрь контейнера, необходиомо их явно задавать, даже если имена совпадают. Это сделано для контроля входных параметров контейнера
+
+  phpmyadmin: # админ клиент для базы mysql
+    image: phpmyadmin/phpmyadmin:latest
+    restart: always
+    links:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "8080:80" # админ клиент выставляется по этому порту
+    networks:
+      - dockerclusters
